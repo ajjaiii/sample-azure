@@ -1,6 +1,6 @@
-pool:
-  name: belajar
-  demands:
-  - myCustomCapability   # check for existence of capability
-  - agent.os -equals Darwin  # check for specific string in capability
-  displayName: 'Run a multi-line script'
+pool: belajar
+steps:
+  - script:
+  echo "Hello"
+  echo "test pipeline"
+  
