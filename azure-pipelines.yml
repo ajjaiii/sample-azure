@@ -1,4 +1,4 @@
-pool: belajar
+pool: Default
 steps:
 - script:
     echo "Hello"
