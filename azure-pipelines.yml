@@ -1,5 +1,5 @@
 pool: belajar
 steps:
-  - script:
+- script:
     echo "Hello"
     echo "test pipeline"
