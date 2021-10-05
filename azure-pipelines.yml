@@ -1,6 +1,5 @@
 pool: belajar
 steps:
   - script:
-  echo "Hello"
-  echo "test pipeline"
-  
+    echo "Hello"
+    echo "test pipeline"
