@@ -1,5 +1,117 @@
-pool: Default
-steps:
-- script:
-    echo "Hello"
-    echo "test pipeline"
+trigger:
+- main
+- develop
+- latest
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  - stage: artifacts
+    displayName: Artifacts stage
+    jobs:
+    - job: artifacts
+      displayName: 'Create Artifacts'
+      steps:
+      - script: |
+          if [ $(Build.SourceBranchName) = 'main' ]; then # master or main
+          echo export IMAGE_TAG=prod-$(Build.BuildNumber) > env.sh
+          echo export SWARMPIT_URL=https://swarmpit.prod.klinikpintar.id/api/services/$PROD_SERVICE_ID/redeploy?tag=prod-$(Build.BuildNumber) >> env.sh
+          echo export SWARMPIT_TOKEN=$SWARMPIT_PROD_TOKEN >> env.sh
+
+          elif [ $(Build.SourceBranchName) = 'develop' ]; then
+          echo export IMAGE_TAG=staging-$(Build.BuildNumber) > env.sh
+          echo export SWARMPIT_URL=https://swarmpit.staging.klinikpintar.id/api/services/$STAGING_SERVICE_ID/redeploy?tag=staging-$(Build.BuildNumber) >> env.sh
+          echo export SWARMPIT_TOKEN=$SWARMPIT_STAGING_TOKEN >> env.sh
+
+          else
+          echo export IMAGE_TAG=latest-$(Build.BuildNumber) > env.sh
+          echo export SWARMPIT_URL=https://swarmpit.latest.klinikpintar.id/api/services/$LATEST_SERVICE_ID/redeploy?tag=latest-$(Build.BuildNumber) >> env.sh
+          echo export SWARMPIT_TOKEN=$SWARMPIT_LATEST_TOKEN >> env.sh
+          fi
+      - task: PublishPipelineArtifact@1
+        inputs:
+          targetPath: '$(System.DefaultWorkingDirectory)'
+          artifactName: tools
+
+  # - stage: build
+  #   displayName: Build Stage
+  #   jobs:
+  #   - job: build
+  #     displayName: 'Docker Build and Push to ECR'
+  #     steps:
+  #     - checkout: none
+  #     - task: DownloadPipelineArtifact@1
+  #       inputs:
+  #         downloadPath: '$(System.DefaultWorkingDirectory)'
+  #     - script: |
+  #         source env.sh
+  #         git submodule update --init --recursive --remote
+  #         docker build -t medigo-api-gateway .
+  #         pipe: atlassian/aws-ecr-push-image:1.4.2
+  #         variables:
+  #           AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+  #           AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+  #           AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+  #           IMAGE_NAME: medigo-api-gateway
+  #           TAGS: ${IMAGE_TAG}
+
+  # - stage: deploydev
+  #   displayName: Stage Dev
+  #   jobs:
+  #   - job: deploy
+  #     condition: ne(variables['Build.SourceBranchName'], 'master')
+  #     displayName: 'Deploy to Dev'
+  #     steps:
+  #     - checkout: none
+  #     - task: NodeTool@0
+  #       inputs:
+  #         versionSpec: '14.x'
+  #       displayName: 'Install NodeJS'
+  #     - task: DownloadPipelineArtifact@1
+  #       inputs:
+  #         downloadPath: '$(System.DefaultWorkingDirectory)'
+  #     - script: |
+  #         cd tools
+  #         ls
+  #         source env.sh
+  #         yarn global add serverless
+  #         yarn
+  #         eval $(echo $DEPLOY_COMMAND)
+
+  # - stage: deployprod
+  #   displayName: Stage Production
+  #   jobs:
+  #   - job: validation
+  #     condition: eq(variables['Build.SourceBranchName'], 'master')
+  #     displayName: 'Deploy Validation'
+  #     pool: server
+  #     steps:
+  #     - task: ManualValidation@0
+  #       timeoutInMinutes: 180
+  #       inputs:
+  #         notifyUsers: |
+  #           trinix.systems@gmail.com
+  #           tools@medigo.id
+  #         instructions: 'are you sure deploy to Production?'
+  #         onTimeout: 'reject'
+
+  #   - job: deployprod
+  #     displayName: 'Deploy to Production'
+  #     dependsOn: validation
+  #     steps:
+  #     - checkout: none
+  #     - task: NodeTool@0
+  #       inputs:
+  #         versionSpec: '14.x'
+  #       displayName: 'Install NodeJS'
+  #     - task: DownloadPipelineArtifact@1
+  #       inputs:
+  #         downloadPath: '$(System.DefaultWorkingDirectory)'
+  #     - script: |
+  #         cd tools
+  #         ls
+  #         source env.sh
+  #         yarn global add serverless
+  #         yarn
+  #         eval $(echo $DEPLOY_COMMAND)
